@@ -1,4 +1,4 @@
-import { style } from "solid-js/web";
+import { h, createSignal, useEffect, render, For } from "./core";
 import "./style.css";
 
 // import { render } from "solid-js/web";
@@ -16,115 +16,111 @@ import "./style.css";
 //   return h(Button, { type: "button", style: { color: "red" }, onClick: increment }, count);
 // }
 
+function TextInput(props) {
+  const wrapper = () => h("div", { class: "flex" });
 
-let effect = null;
+  // const onInput = (e) => setValue((c) => e.target.value);
 
-
-const useEffect = (cb) => {
-  effect = cb
-  effect()
-  effect = null;
+  return h(wrapper, {}, [
+    () =>
+      h(
+        "input",
+        {
+          onInput: props.onInput,
+          class: "border border-gray-300 rounded-md m-1",
+          value: props.value,
+        },
+        []
+      ),
+    // () => h("div", { class: "font-bold" }, [value]),
+  ]);
 }
 
+const Button = (props) => {
+  return h(
+    "button",
+    {
+      class:
+        "border bg-white border-gray-300 cursor-pointer rounded-md px-2 m-1",
+      type: props.type,
+      onClick: props.onClick,
+    },
+    [props.text]
+  );
+};
 
-const h = (type, props, children) => {
-  const el = typeof type === 'function' ? type(props) : document.createElement(type);
+const createRowForm = (props) => {
+  const [inputValue, setInputValue] = createSignal("");
 
-  for (const prop in props) {
-    if (prop === "style") {
-      for (const style in props.style) {
-        el.style[style] = props.style[style];
-      }
-    } else if(prop === 'class') {
-      for(const cs of props[prop].split(' ')) {
-        el.classList.add(cs)
-      }
-    } else if (prop.startsWith('on')) {
-      el.addEventListener(prop.replace('on', '').toLowerCase(), props[prop])
-    } else {
-      el[prop] = props[prop];
-    }
-  }
+  let localInputValue = "";
+  const onInput = (e) => {
+    localInputValue = e.target.value;
+  };
 
-  if (!children) return el
+  const onSubmit = (e) => {
+    e.preventDefault();
+    if (!localInputValue) return
+    props.onCreate(localInputValue);
+    localInputValue = ''
+    setInputValue(() => "");
+  };
 
+  return h(
+    "form",
+    {
+      class: "bg-slate-100 p-4 my-4 flex border-gray-300 rounded-md",
+      style: { width: "400px" },
+      onSubmit,
+    },
+    [
+      TextInput({ value: inputValue, onInput }),
+      Button({ text: "Внести", type: "submit" }),
+    ]
+  );
+};
 
-  children.forEach(child => {
-    if (typeof child === "string") {
-      el.appendChild(document.createTextNode(child));
-    } else if (typeof child === "function") {
+// function App() {
+//   const [items, setItems] = createSignal([
+//     { id: 1, text: "Изучить Solid.js" },
+//     { id: 2, text: "Создать приложение" },
+//     { id: 3, text: "Поделиться опытом" }
+//   ]);
 
-      const res = child();
-      if (res instanceof Node) {
-        el.appendChild(res);
-      } else {
-        useEffect(() => {
-          el.innerHTML = child()
-        })
-      }
-    } else {
-      el.appendChild(child);
-    }
-  });
-  return el;
-}
+//   return h('div', {}, [
+//     h('h1', {}, "Мой список задач"),
+//     h('ul', {},
+//       h(For, {
+//         each: items(),
+//         children: (item) => h('li', {}, item.text)
+//       })
+//     )
+//   ]);
+// }
 
+const List = () => {
+  const [items, setItems] = createSignal(["asd"]);
 
-const render = (component, target) => {
-  const el = component();
-  target.appendChild(el);
-}
+  const onCreate = (val) => {
+    setItems((v) => [...v, val]);
+  };
 
-
-
-function createSignal(raw) {
-  const effects = new Set();
-
-  const state = {
-    value: raw
-  }
-
-  const getter = () => {
-    if (effect) {
-      effects.add(effect);
-      effect = null;
-    }
-    return state.value
-  }
-
-  const setter = (cb) => {
-    state.value = cb(state.value)
-    effects.forEach(e => {
-      e()
+  const onRemove = (ind) => {
+    setItems((v) => {
+      return v.toSpliced(ind, 1);
     })
-  }
+  };
 
-  return [getter, setter]
-}
+  return h("div", { class: "mx-4" }, [
+    createRowForm({ onCreate }),
+    h(For, {
+      each: items,
+      children: (item, ind) =>
+        h("li", {}, [
+          item,
+          h("span", { class: "ml-2 p-2 cursor-pointer", onClick: () => onRemove(ind) }, ["x"]),
+        ]),
+    }),
+  ]);
+};
 
-
-function Button(props) {
-  return h("button", props)
-}
-
-function Counter() {
-  const [count, setCount] = createSignal(0);
-  const increment = (e) => setCount(c => c + 1);
-
-  return h(Button, { type: "button", style: { color: "red" }, onClick: increment }, [count]);
-}
-
-
-function TextInput() {
-  const wrapper = (props) => h('div', props)
-
-  const [value, setValue] = createSignal('');
-  const onInput = (e) => setValue(c => e.target.value);
-
-
-  return h(wrapper, { value }, [
-    () => h('input', { onInput }), 
-    () => h('div', {}, [value])])
-}
-
-render(() => h('div', { class: 'flex grey p-4', style: { width: '400px' } }, [Counter, TextInput]), document.getElementById("app"));
+render(() => List(), document.getElementById("app"));

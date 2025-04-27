@@ -5,7 +5,11 @@ module.exports = {
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
-    extend: {},
+    extend: {
+      backgroundColor: {
+        'blue': '#3b82f6', // Tailwind's blue-500 color
+      },
+    },
   },
   plugins: [],
 }
